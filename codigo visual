@@ -1,0 +1,292 @@
+#include <string>
+#include <mysql.h>
+#include <iostream>
+
+using namespace std;
+
+// ANSI color codes
+const string RESET = "\033[0m";
+const string GREEN = "\033[32m";
+const string WHITE = "\033[37m";
+
+class ManejoBaseDeDatos {
+private:
+    MYSQL* conn;
+
+public:
+    ManejoBaseDeDatos(const string& host, const string& user, const string& password, const string& database, int port = 3306) {
+        conn = mysql_init(NULL);
+        if (conn == NULL) {
+            cerr << "Error al inicializar la base de datos de MySQL" << endl;
+            exit(1);
+        }
+
+        if (!mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, NULL, 0)) {
+            cerr << "Error al conectar a la base de datos de MySQL: " << mysql_error(conn) << endl;
+            exit(1);
+        }
+    }
+
+    ~ManejoBaseDeDatos() {
+        mysql_close(conn);
+    }
+
+    void createPersonas(const string& nombre, const string& apellido, const string& email) {
+        string query = "INSERT INTO Personas (nombre, apellido, email) VALUES ('" + nombre + "', '" + apellido + "', '" + email + "')";
+        executeQuery(query);
+        refreshPersonas();
+    }
+
+    void createViaje(const string& numero_vuelo, const string& origen, const string& destino, const string& fecha) {
+        string query = "INSERT INTO Viaje (numero_vuelo, origen, destino, fecha) VALUES ('" + numero_vuelo + "', '" + origen + "', '" + destino + "', '" + fecha + "')";
+        executeQuery(query);
+        refreshViaje();
+    }
+
+    void createAcceso(int pasajero_id, int vuelo_id, const string& fecha_reserva, const string& numero_asiento, const string& clase) {
+        string query = "INSERT INTO Acceso (Personas_id, Viaje_id, fecha_reserva, numero_asiento, clase) VALUES (" + to_string(pasajero_id) + ", " + to_string(vuelo_id) + ", '" + fecha_reserva + "', '" + numero_asiento + "', '" + clase + "')";
+        executeQuery(query);
+        refreshAcceso();
+    }
+
+    void deletePersonas(int id) {
+        string query = "DELETE FROM Personas WHERE id = " + to_string(id);
+        executeQuery(query);
+        refreshPersonas();
+    }
+
+    void deleteViaje(int id) {
+        string query = "DELETE FROM Viaje WHERE id = " + to_string(id);
+        executeQuery(query);
+        refreshViaje();
+    }
+
+    void deleteAcceso(int id) {
+        string query = "DELETE FROM Acceso WHERE id = " + to_string(id);
+        executeQuery(query);
+        refreshAcceso();
+    }
+
+    void updatePersonas(int id, const string& nombre, const string& apellido, const string& email) {
+        string query = "UPDATE Personas SET nombre = '" + nombre + "', apellido = '" + apellido + "', email = '" + email + "' WHERE id = " + to_string(id);
+        executeQuery(query);
+        refreshPersonas();
+    }
+
+    void updateViaje(int id, const string& numero_vuelo, const string& origen, const string& destino, const string& fecha) {
+        string query = "UPDATE Viaje SET numero_vuelo = '" + numero_vuelo + "', origen = '" + origen + "', destino = '" + destino + "', fecha = '" + fecha + "' WHERE id = " + to_string(id);
+        executeQuery(query);
+        refreshViaje();
+    }
+
+    void updateAcceso(int id, const string& fecha_reserva, const string& numero_asiento, const string& clase) {
+        string query = "UPDATE Acceso SET fecha_reserva = '" + fecha_reserva + "', numero_asiento = '" + numero_asiento + "', clase = '" + clase + "' WHERE id = " + to_string(id);
+        executeQuery(query);
+        refreshAcceso();
+    }
+
+    void viewPersonas() {
+        executeQuery("SELECT * FROM Personas", true);
+    }
+
+    void viewViaje() {
+        executeQuery("SELECT * FROM Viaje", true);
+    }
+
+    void viewAcceso() {
+        executeQuery("SELECT * FROM Acceso", true);
+    }
+
+    void executeQuery(const string& query, bool displayResult = false) {
+        if (mysql_query(conn, query.c_str())) {
+            cerr << "Error al ejecutar query: " << mysql_error(conn) << endl;
+        }
+        else if (displayResult) {
+            MYSQL_RES* res = mysql_store_result(conn);
+            if (res) {
+                MYSQL_ROW row;
+                while ((row = mysql_fetch_row(res))) {
+                    for (unsigned int i = 0; i < mysql_num_fields(res); i++) {
+                        cout << row[i] << " ";
+                    }
+                    cout << endl;
+                }
+                mysql_free_result(res);
+            }
+            else {
+                cerr << "Error al guardar resultado: " << mysql_error(conn) << endl;
+            }
+        }
+    }
+
+    void refreshPersonas() {
+        // No output
+    }
+
+    void refreshViaje() {
+        // No output
+    }
+
+    void refreshAcceso() {
+        // No output
+    }
+};
+
+void displayMenu() {
+    cout << GREEN << "-----------------------------------------" << endl;
+    cout << "                 Menu                    " << endl;
+    cout << "-----------------------------------------" << RESET;
+    cout << WHITE << endl;
+    cout << "1. Crear Personas" << endl;
+    cout << "2. Ver Personas" << endl;
+    cout << "3. Actualizar Personas" << endl;
+    cout << "4. Borrar Personas" << endl;
+    cout << "5. Crear Viaje" << endl;
+    cout << "6. Ver Viaje" << endl;
+    cout << "7. Actualizar Viaje" << endl;
+    cout << "8. Borrar Viaje" << endl;
+    cout << "9. Crear Acceso" << endl;
+    cout << "10. Ver Acceso" << endl;
+    cout << "11. Actualizar Acceso" << endl;
+    cout << "12. Borrar Acceso" << endl;
+    cout << GREEN << "-----------------------------------------" << endl;
+    cout << "Elige un numero: " << RESET;
+}
+
+int main() {
+    ManejoBaseDeDatos dbManager("localhost", "root", "Umg$2024", "Reservacion");
+
+    int choice;
+    char cont;
+    do {
+        displayMenu();
+        cin >> choice;
+
+        switch (choice) {
+        case 1: {
+            string nombre, apellido, email;
+            cout << "Primer Nombre: ";
+            cin >> nombre;
+            cout << "Apellido: ";
+            cin >> apellido;
+            cout << "Correo Electronico: ";
+            cin >> email;
+            dbManager.createPersonas(nombre, apellido, email);
+            break;
+        }
+        case 2:
+            dbManager.viewPersonas();
+            break;
+        case 3: {
+            int id;
+            string nombre, apellido, email;
+            cout << "Ingrese ID de Persona para actualizar: ";
+            cin >> id;
+            cout << "Primer Nombre: ";
+            cin >> nombre;
+            cout << "Apellido: ";
+            cin >> apellido;
+            cout << "Correo Electronico: ";
+            cin >> email;
+            dbManager.updatePersonas(id, nombre, apellido, email);
+            break;
+        }
+        case 4: {
+            int id;
+            cout << "Ingrese ID de Persona para borrar: ";
+            cin >> id;
+            dbManager.deletePersonas(id);
+            break;
+        }
+        case 5: {
+            string numero_vuelo, origen, destino, fecha;
+            cout << "Numero de vuelo: ";
+            cin >> numero_vuelo;
+            cout << "Origen: ";
+            cin >> origen;
+            cout << "Destino: ";
+            cin >> destino;
+            cout << "Fecha (YYYY-MM-DD): ";
+            cin >> fecha;
+            dbManager.createViaje(numero_vuelo, origen, destino, fecha);
+            break;
+        }
+        case 6:
+            dbManager.viewViaje();
+            break;
+        case 7: {
+            int id;
+            string numero_vuelo, origen, destino, fecha;
+            cout << "ID de Vuelo para actualizar: ";
+            cin >> id;
+            cout << "Nuevo numero de vuelo: ";
+            cin >> numero_vuelo;
+            cout << "Nuevo Origen: ";
+            cin >> origen;
+            cout << "Nuevo Destino: ";
+            cin >> destino;
+            cout << "Fecha (YYYY-MM-DD): ";
+            cin >> fecha;
+            dbManager.updateViaje(id, numero_vuelo, origen, destino, fecha);
+            break;
+        }
+        case 8: {
+            int id;
+            cout << "ID de Vuelo para Borrar: ";
+            cin >> id;
+            dbManager.deleteViaje(id);
+            break;
+        }
+        case 9: {
+            int personas_id, viaje_id;
+            string fecha_reserva, numero_asiento, clase;
+            cout << "Ingrese Pasajero ID: ";
+            cin >> personas_id;
+            cout << "Ingrese Vuelo ID: ";
+            cin >> viaje_id;
+            cout << "Ingrese fecha de reservacion (YYYY-MM-DD): ";
+            cin >> fecha_reserva;
+            cout << "Ingrese numero de asiento: ";
+            cin >> numero_asiento;
+            cout << "Ingrese clase: ";
+            cin >> clase;
+            dbManager.createAcceso(personas_id, viaje_id, fecha_reserva, numero_asiento, clase);
+            break;
+        }
+        case 10:
+            dbManager.viewAcceso();
+            break;
+        case 11: {
+            int id;
+            string fecha_reserva, numero_asiento, clase;
+            cout << "Ingrese ID de acceso para actualizar: ";
+            cin >> id;
+            cout << "Ingrese nueva fecha de reservacion (YYYY-MM-DD): ";
+            cin >> fecha_reserva;
+            cout << "Ingrese nuevo numero de asiento: ";
+            cin >> numero_asiento;
+            cout << "Ingrese nueva clase: ";
+            cin >> clase;
+            dbManager.updateAcceso(id, fecha_reserva, numero_asiento, clase);
+            break;
+        }
+        case 12: {
+            int id;
+            cout << "Ingrese ID del acceso para borrar: ";
+            cin >> id;
+            dbManager.deleteAcceso(id);
+            break;
+        }
+        default:
+            cout << "Opcion invalida, por favor intente de nuevo." << endl;
+        }
+
+        cout << "¿Desea continuar? (s/n): ";
+        cin >> cont;
+    } while (cont == 's' || cont == 'S');
+
+    cout << "¡Tenga Buen Viaje!" << endl;
+
+    return 0;
+}
+
